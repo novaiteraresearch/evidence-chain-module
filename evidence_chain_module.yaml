@@ -1,0 +1,84 @@
+# Evidence Chain Module – Reusable Timestamp & Hash Anchoring
+# This module can be referenced across Notion pages to establish immutable
+# creation and modification timestamps via cryptographic hashing and blockchain anchoring.
+
+evidence_chain_module:
+  name: "Evidence Chain – Timestamp & Hash Anchoring"
+  module_id: "evidence_chain_v1"
+  version: "1.1.0"
+  description: >
+    Reusable evidence-chain module for establishing immutable creation and
+    modification timestamps via cryptographic hashing and blockchain anchoring.
+    Designed to be embedded into YAML frontmatter for IP-sensitive artifacts.
+  maintainer: "Nova Itera Research Group, LLC"
+  status: "stable"
+
+# Where this module can be plugged in
+applies_to:
+  - "page_metadata"
+  - "artifact_metadata"
+
+# Parameters that consuming specs can override
+params:
+  chain: "bitcoin"             # default chain (e.g., bitcoin, ethereum)
+  network: "mainnet"           # default network (e.g., mainnet, testnet)
+  content_hash_algo: "sha256"  # supported: sha256, blake2b, etc.
+  content_fields:              # fields that must be included in hash payload
+    - "page_id"
+    - "created_timestamp_unix_ms"
+    - "last_modified_timestamp_unix_ms"
+
+# Evidence chain schema for any page
+evidence_chain:
+  validation_methods:
+    - "Git commit timestamps"
+    - "IPFS content addressing"
+    - "Blockchain timestamp anchoring"
+    - "Notion API snapshot verification"
+
+  page_metadata:
+    page_id: null                      # to be set by calling system
+    created_timestamp_unix_ms: null    # canonical origin time
+    last_modified_timestamp_unix_ms: null
+
+  blockchain_timestamp:
+    status: "pending"                  # "pending" | "anchored" | "failed"
+    chain: "<param:chain>"             # resolved from evidence_chain_module.params.chain
+    network: "<param:network>"         # resolved from evidence_chain_module.params.network
+    content_hash_algo: "<param:content_hash_algo>"
+    content_hash: null                 # hash of canonical payload; set by anchoring tool
+    tx_id: null                        # blockchain transaction ID
+    anchored_unix_ms: null             # time of anchoring on chain
+    anchor_reference: null             # block height or explorer URL
+    error_message: null                # optional failure reason
+
+  provenance:
+    canonical_payload_spec:
+      description: >
+        Canonical JSON payload used to derive content_hash. Order and
+        serialization must be stable to ensure reproducible hashes.
+      fields: "<param:content_fields>"
+      example_payload_structure:
+        page_id: "NOTION_PAGE_ID"
+        created_timestamp_unix_ms: 1738057800000
+        last_modified_timestamp_unix_ms: 1738057800000
+
+  verification_process:
+    steps:
+      - "Capture initial creation and last-modified timestamps from authoritative metadata source"
+      - "Construct canonical payload using configured content_fields"
+      - "Compute content hash with content_hash_algo"
+      - "Submit hash to blockchain anchoring service on configured chain/network"
+      - "Record tx_id, anchored_unix_ms, and anchor_reference"
+      - "Expose verification instructions to third parties for independent validation"
+
+  verification_instructions: |
+    1. Retrieve the original artifact and reconstruct the canonical payload using the
+       agreed content_fields and authoritative metadata source.
+    2. Compute the hash using the specified content_hash_algo.
+    3. Compare the computed hash to content_hash stored in this evidence_chain.
+    4. Look up tx_id on the specified chain/network and confirm:
+       - The on-chain hash matches content_hash
+       - The block timestamp is consistent with claimed creation time
+    5. If both checks pass, the artifact's existence and integrity at or before
+       the block timestamp is cryptographically supported.
